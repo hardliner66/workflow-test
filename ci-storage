@@ -4,10 +4,6 @@ set -e
 
 command="$1"
 
-script_dir="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-
-pushd "$script_dir" &>/dev/null || exit 1
-
 data_branch="${CI_STORAGE_DATA_BRANCH:-ci/persistent-storage}"
 remote_url="$(git config --get remote.origin.url)"
 root_dir="$(git rev-parse --show-toplevel)"
@@ -126,4 +122,3 @@ case "$command" in
 esac
 
 popd &>/dev/null || exit 1 # git root
-popd &>/dev/null || exit 1 # script dir
