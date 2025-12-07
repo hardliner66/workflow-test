@@ -49,22 +49,29 @@ configure_git () {
 }
 
 init_ci_storage () {
+      # create the branch for storing the data and check it out
       git checkout -b "$data_branch"
+
       # if the branch didn't exist, make sure it's empty
       # this is because the files in here are for storing data across CI runs
       # and not for the actual codebase
-      git rm -rf *
+      git rm -rf ./*
       git rm -rf .github
       git rm .gitignore
 
+      # create the expected directory structure
+      # and add .gitkeep, so that git doesn't complain about empty directories
       mkdir -p .ci-storage
       touch .ci-storage/.gitkeep
 
       configure_git || exit 1
 
+      # add changes to git, commit and push
       git add .ci-storage
-      git commit -m "init"
+      git commit -m "initialize ci-storage"
       git push origin "$data_branch"
+
+      # switch back to the previous branch
       git checkout -
 }
 
