@@ -4,8 +4,6 @@ A hack to manage persistent data across CI/CD workflow runs.
 
 ## Usage (with GitHub Actions)
 
-Download the file [ci-storage](./ci-storage) and place it in your project directory.
-
 In your workflow file, make sure you add the necessary permissions:
 
 ```yaml
@@ -17,24 +15,24 @@ Then add the following step somewhere before the workflow needs access to the st
 
 ```yaml
 - name: Get or create the storage directory
-  run: ./ci-storage get
+  uses: hardliner66/ci-storage/get@v1
 ```
 
-_The `get` command will automatically call `init`, if the system isn't initialized.
+_The `get` action will automatically call `init`, if the system isn't initialized.
 If you want to prevent automatic initialization, set the environment variable `CI_STORAGE_INIT` to `no_auto`.
-In this case, you need to run `./ci-storage init` manually before calling `./ci-storage get` or `./ci-storage persist`._
+In this case, you need to run the `init` action manually before calling `get` or `persist`._
 
 After that is done, you can add, change or remove files from the storage directory (`.ci-storage/`).
+The get action will also set the environment variable `CI_STORAGE_PATH` to the path of the storage directory.
+You can use that to make sure your scripts always use the correct path, in case it ever changes or
+if you decide to change it to something else.
 
-You can use the command `./ci-storage path` to get the absolute path to the storage directory.
-This way you will always use the correct path.
-
-When your workflow is done, you can run `./ci-storage persist` to store the changes.
+When your workflow is done, you can run the `persist` action to store the changes.
 If you don't persist the changes, they will be lost once the workflow run is completed.
 
 ```yaml
 - name: Persist changes to storage
-  run: ./ci-storage persist
+  uses: hardliner66/ci-storage/persist@v1
 ```
 
 ## Example
@@ -47,26 +45,26 @@ as an argument. The script updates a counter in a JSON file or creates the file 
 ## Known Issues
 
 As this is basically a hack to persist data across CI runs, there are some limitations. For instance,
-if two CI jobs are running at the same time and they both use the `ci-storage` script,
+if two CI jobs are running at the same time and they both use the `ci-storage` action,
 one of the jobs will probably fail because as soon as one job pushes to the repository,
 the other job can only push if it pulled after the push happened.
 
 And because we don't know what data was changed, we don't know if we can recover
 (e.g. by pulling again if pushing fails) without git potentially messing up the merge.
-The script runs `git pull --ff-only` before pushing just in case, but that's not
+The `persist` action runs `git pull --ff-only` before pushing just in case, but that's not
 guaranteed to work for all cases.
 
 ## Supported CI Environments
 
-Right now, `ci-storage` only supports GitHub Actions. This is because the script only knows which
-configuration to set in order to allow pushing from a CI job. If you know how to detect other CI environments and how to set the necessary configuration, feel free to contribute!
+Right now, `ci-storage` only supports GitHub Actions. This is because the actions only know which
+configuration to set in order to allow pushing from a GitHub Actions job. If you know how to detect other CI environments and how to set the necessary configuration, feel free to contribute!
 
 If you are using a custom CI environment or if you are using a custom configuration so that
-it can't be added here, you can set the environment variable `CI_GIT_CONFIG` to `skip`,
+it can't be added here, you can set the environment variable `CI_STORAGE_GIT_CONFIG` to `skip`,
 which will disable the automatic configuration attempt of git.
-Just make sure you configure git to allow pushing before calling `./ci-storage persist`
-or the script will fail.
+Just make sure you configure git to allow pushing before using the `persist` action
+or it will fail.
 
 Alternatively you can use the path to your custom configuration script as value For
-the environment variable `CI_GIT_CONFIG`. In this case, the script will execute the configured script
+the environment variable `CI_STORAGE_GIT_CONFIG`. In this case, the action will execute the configured script
 every time before trying to push.

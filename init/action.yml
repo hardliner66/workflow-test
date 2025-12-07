@@ -11,4 +11,4 @@ runs:
               SCRIPT="${GITHUB_ACTION_PATH}/../ci-storage"
 
               chmod +x "$SCRIPT"
-              bash "$SCRIPT" init
+              CI_STORAGE_REPO_ROOT=${{ github.workspace }} bash "$SCRIPT" init

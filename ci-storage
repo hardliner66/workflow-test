@@ -6,7 +6,20 @@ command="$1"
 
 data_branch="${CI_STORAGE_DATA_BRANCH:-ci/persistent-storage}"
 remote_url="$(git config --get remote.origin.url)"
-root_dir="$(git rev-parse --show-toplevel)"
+
+# CI_STORAGE_REPO_ROOT gets set before the script is called via one of the provided github actions
+# you can also manually set it if you run a custom setup, where the script is not located in then
+# root of the repository
+if [[ "$CI_STORAGE_REPO_ROOT" ]]
+then
+    root_dir="$CI_STORAGE_REPO_ROOT"
+else
+    # if the repo root wasn't set, we base it off the script location
+    script_dir="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+    pushd "$script_dir" &>/dev/null || exit 1
+    root_dir="$(git rev-parse --show-toplevel)"
+    popd &>/dev/null || exit 1
+fi
 
 pushd "$root_dir" &>/dev/null || exit 1
 
@@ -18,22 +31,22 @@ config_github() {
 }
 
 configure_git () {
-    if [[ "$CI_GIT_CONFIG" == "skip" ]]
+    if [[ "$CI_STORAGE_GIT_CONFIG" == "skip" ]]
     then
         return 0
-    elif [[ -n "$CI_GIT_CONFIG" ]]
+    elif [[ "$CI_STORAGE_GIT_CONFIG" ]]
     then
-        if [ ! -f "$CI_GIT_CONFIG" ]; then
-            err "CI_GIT_CONFIG is set, but it neither contains the value 'skip' nor a valid path to a script" \
+        if [ ! -f "$CI_STORAGE_GIT_CONFIG" ]; then
+            err "CI_STORAGE_GIT_CONFIG is set, but it neither contains the value 'skip' nor a valid path to a script" \
                 "to configure git."
             exit 1
         fi
-        if [[ ! -x "$CI_GIT_CONFIG" ]]
+        if [[ ! -x "$CI_STORAGE_GIT_CONFIG" ]]
         then
-            err "CI_GIT_CONFIG is set, but the script at the given path is not executable."
+            err "CI_STORAGE_GIT_CONFIG is set, but the script at the given path is not executable."
             exit 1
         fi
-        bash -c "$CI_GIT_CONFIG"
+        bash -c "$CI_STORAGE_GIT_CONFIG"
     elif [[ "$GITHUB_ACTIONS" == "true" ]]
     then
         config_github
@@ -47,6 +60,9 @@ configure_git () {
 }
 
 init_ci_storage () {
+      # do this first so we exit early when we can't configure git properly
+      configure_git || exit 1
+
       # create the branch for storing the data and check it out
       git checkout -b "$data_branch"
 
@@ -61,8 +77,6 @@ init_ci_storage () {
       # and add .gitkeep, so that git doesn't complain about empty directories
       mkdir -p .ci-storage
       touch .ci-storage/.gitkeep
-
-      configure_git || exit 1
 
       # add changes to git, commit and push
       git add .ci-storage
@@ -105,9 +119,9 @@ case "$command" in
     ;;
 
   persist)
-      git checkout "$data_branch"
-
       configure_git || exit 1
+
+      git checkout "$data_branch"
 
       git pull --ff-only
       git add .ci-storage

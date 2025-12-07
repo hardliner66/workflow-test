@@ -19,7 +19,7 @@ runs:
               chmod +x "$SCRIPT"
 
               # Ensure storage directory exists (and init if needed)
-              bash "$SCRIPT" get
+              CI_STORAGE_REPO_ROOT=${{ github.workspace }} bash "$SCRIPT" get
 
               # Get absolute path
               STORAGE_PATH="$("$SCRIPT" path)"
