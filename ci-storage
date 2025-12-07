@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -eo pipefail
-
 command="$1"
 
 script_dir="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -50,10 +48,35 @@ configure_git () {
     fi
 }
 
+init_ci_storage () {
+      git checkout -b "$data_branch"
+      # if the branch didn't exist, make sure it's empty
+      # this is because the files in here are for storing data across CI runs
+      # and not for the actual codebase
+      git rm -rf *
+      git rm -rf .github
+      git rm .gitignore
+
+      mkdir -p .ci-storage
+      touch .ci-storage/.gitkeep
+
+      configure_git || exit 1
+
+      git add .ci-storage
+      git commit -m "init"
+      git push origin "$data_branch"
+      git checkout -
+}
+
 shopt -s nocasematch
 case "$command" in
   path)
       echo "$(pwd)"/.ci-storage
+      ;;
+
+
+  init)
+      init_ci_storage || exit 1
       ;;
 
   get)
@@ -65,23 +88,7 @@ case "$command" in
 
       if [ ${exit_code} -ne 0 ]
       then
-          git checkout -b "$data_branch"
-          # if the branch didn't exist, make sure it's empty
-          # this is because the files in here are for storing data across CI runs
-          # and not for the actual codebase
-          git rm -rf *
-          git rm -rf .github
-          git rm .gitignore
-
-          mkdir -p .ci-storage
-          touch .ci-storage/.gitkeep
-
-          configure_git || exit 1
-
-          git add .ci-storage
-          git commit -m "init"
-          git push origin "$data_branch"
-          git checkout -
+          init_ci_storage || exit 1
       fi
       git checkout origin/"$data_branch" -- .ci-storage
     ;;
